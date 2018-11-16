@@ -1,0 +1,57 @@
+relpage.sh:
+f_release_set_svn_permissions $C_CONFIG_PRODUCT $F_RELEASE 'release-mgn,public' 'true,true,true,true,false,false'
+
+P_PRODUCT=`echo $C_CONFIG_PRODUCT | tr a-z A-Z`
+C_CONFLUENCE_LOGIN=`echo $C_CONFIG_CONFLUENCE_AUTH | cut -d ":" -f1`
+C_CONFLUENCE_PASSWORD=`echo $C_CONFIG_CONFLUENCE_AUTH | cut -d ":" -f2`
+
+if [[ ! -z "$GETOPT_MOVEPRODDATE" ]]; then
+    if [[ $P_PRODUCT == FEDPGU ]]; then
+        P_PRODUCT=PGU
+    fi
+    $C_PYTHON common/confluence2.py --url $C_CONFIG_CONFLUENCE_URL --login $C_CONFLUENCE_LOGIN --password $C_CONFLUENCE_PASSWORD  --move_prod_date $GETOPT_MOVEPRODDATE --page_title $P_PRODUCT-Release-$P_RELEASE --update_schedule TESTSchedule
+    exit 0
+fi
+
+if [[ ! -z "$GETOPT_MOVEFINDATE" ]]; then
+    if [[ $P_PRODUCT == FEDPGU ]]; then
+        P_PRODUCT=PGU
+    fi
+    $C_PYTHON common/confluence2.py --url $C_CONFIG_CONFLUENCE_URL --login $C_CONFLUENCE_LOGIN --password $C_CONFLUENCE_PASSWORD  --move_finalize_date $GETOPT_MOVEFINDATE --page_title $P_PRODUCT-Release-$P_RELEASE --update_schedule TESTSchedule
+    exit 0
+fi
+
+function f_add_release_to_schedule() {
+    if [[ $P_PRODUCT == FEDPGU ]]; then
+        P_PRODUCT=PGU
+    fi
+    $C_PYTHON common/confluence2.py --url $C_CONFIG_CONFLUENCE_URL --login $C_CONFLUENCE_LOGIN --password $C_CONFLUENCE_PASSWORD  --add_release_to_schedule $P_PRODUCT-Release-$P_RELEASE --update_schedule TESTSchedule
+}
+
+f_add_release_to_schedule
+
+
+getopts.sh:
+                '-moveproddate')
+                        export GETOPT_MOVEPRODDATE=$3
+                        shift 1
+                        ;;
+                '-movefindate')
+                        export GETOPT_MOVEFINDATE=$3
+                        shift 1
+                        ;;
+
+						
+finalize.sh:
+$C_PYTHON common/confluence2.py --url $C_CONFIG_CONFLUENCE_URL --login $C_CONFLUENCE_LOGIN  --password $C_CONFLUENCE_PASSWORD  --page_title $P_PRODUCT-Release-$F_RELEASE --set_permissions --set_status_finalized
+
+Описание:
+- Добавлен функционал: relpage.sh теперь можно использовать в формате ./relpage.sh -movefindate RELEASE DD-MM или ./relpage.sh -moveproddate RELEASE DD-MM, в таком случае соответствующие даты на релизной странице будут перенесены и обновлен календарь.
+- Добавлен функционал: при инициации релиза в релизный календарь добавляется строка с его описанием.
+- Добавлен функционал: запуск common/confluence2.py --url $URL --login $LOGIN --password $PASSWORD --update_schedule $SCHEDULE_PAGE обновит все строки в календаре(поля дат и статуса релиза), кроме тех, что имеют status PROD.
+- Исправлена ошибка с правами в свн при финализации.
+- Модуль common/confluence2.py можно использовать со всем возможными ключами одновременно, их описание в справке. Пример: python(3) confluence2.py --help
+
+
+
+
